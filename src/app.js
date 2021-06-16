@@ -13,3 +13,25 @@ const connection = new Pool({
 
 const app = express();
 app.use(express.json());
+
+/* Categories routes */
+
+app.get('/categories', async (req, res) => {
+    
+    try{
+        const result = await connection.query('SELECT * FROM categories');
+        res.send(result.rows);
+
+    } catch(e) {
+        console.log(e);
+        res.send(500);
+    }
+});
+
+
+
+
+
+app.listen(4000, () => {
+    console.log('Server listening on 4000');
+})
