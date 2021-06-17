@@ -59,7 +59,19 @@ app.post('/categories', async (req, res) => {
 /* Games routes */
 
 app.get('/games', async (req, res) => {
-    
+    try{
+        const result = await connection.query(`
+            SELECT games.*, categories.name 
+            AS "categoryName"
+            FROM games
+            JOIN categories
+            ON categories.id = games."categoryId"
+            `)
+        res.send(result.rows)
+    } catch(e) {
+        console.log(e);
+        res.sendStatus(500);
+    }   
 })
 
 app.post('/games', async(req, res) => {
