@@ -60,17 +60,17 @@ app.post('/categories', async (req, res) => {
 
 app.get('/games', async (req, res) => {
     const  { name } = req.query;
-    const querySetting = name === undefined ? "" : name;
 
     try{
+        const querySetting = name === undefined ? "" : name;
         const result = await connection.query(`
             SELECT games.*, categories.name 
             AS "categoryName"
             FROM games
             JOIN categories
             ON categories.id = games."categoryId" 
-            WHERE categories.name ILIKE $1`
-            ,[querySetting+'%']);
+            WHERE games.name ILIKE $1`
+            ,[querySetting+"%"]);
         res.send(result.rows);
 
     } catch(e) {
@@ -114,6 +114,20 @@ app.post('/games', async(req, res) => {
 
 /* Customers route */
 
+app.get('/customers', async (req, res) => {
+    const { cpf } = req.query;
+
+    try{
+        const querySetting = cpf === undefined ? "" : cpf;
+        const result = await connection.query(`SELECT * FROM customers WHERE cpf LIKE $1`, [querySetting+"%"])
+        res.send(result.rows)
+
+    } catch(e) {
+        console.log(e);
+        res.sendStatus(500);
+    } 
+});
+
 app.post('/customers', async (req, res) => {
     const { name, phone, cpf, birthday } = req.body;
     const customersSchema = joi.object({
@@ -136,7 +150,6 @@ app.post('/customers', async (req, res) => {
         } else{
             return res.sendStatus(400);
         }
-
 
     } catch(e) {
         console.log(e);
