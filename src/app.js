@@ -59,20 +59,25 @@ app.post('/categories', async (req, res) => {
 /* Games routes */
 
 app.get('/games', async (req, res) => {
+    const  { name } = req.query;
+    const querySetting = name === undefined ? "" : name;
+
     try{
         const result = await connection.query(`
             SELECT games.*, categories.name 
             AS "categoryName"
             FROM games
             JOIN categories
-            ON categories.id = games."categoryId"
-            `)
-        res.send(result.rows)
+            ON categories.id = games."categoryId" 
+            WHERE categories.name ILIKE $1`
+            ,[querySetting+'%']);
+        res.send(result.rows);
+
     } catch(e) {
         console.log(e);
         res.sendStatus(500);
     }   
-})
+});
 
 app.post('/games', async(req, res) => {
     const { name, image, stockTotal, categoryId, pricePerDay } = req.body;
@@ -98,7 +103,7 @@ app.post('/games', async(req, res) => {
             await connection.query('INSERT INTO games (name, image, "stockTotal", "categoryId", "pricePerDay") VALUES ($1,$2,$3,$4,$5)', [name, image, stockTotal, categoryId, pricePerDay]);
             return res.sendStatus(201); 
         } else{
-            return res.sendStatus(400)
+            return res.sendStatus(400);
         }
 
     } catch(e) {
@@ -107,6 +112,37 @@ app.post('/games', async(req, res) => {
     } 
 });
 
+/* Customers route */
+
+app.post('/customers', async (req, res) => {
+    const { name, phone, cpf, birthday } = req.body;
+    const customersSchema = joi.object({
+        name: joi.string().trim().required(),
+        phone: joi.string().min(10).max(11).regex(/^[0-9]+$/).required(),
+        cpf: joi.string().length(11).regex(/^[0-9]+$/).required(),
+        birthday: joi.date()
+    });
+
+    try{
+        const cpfExists = await connection.query('SELECT * FROM customers WHERE cpf = $1', [cpf]);
+        if (cpfExists.rows[0]){
+            return res.sendStatus(409);
+        }
+
+        const isValid = customersSchema.validate({name, phone, cpf, birthday});
+        if (isValid.error === undefined){
+            await connection.query('INSERT INTO customers (name, phone, cpf, birthday) VALUES ($1,$2,$3,$4)', [name, phone, cpf, birthday]);
+            return res.sendStatus(201); 
+        } else{
+            return res.sendStatus(400);
+        }
+
+
+    } catch(e) {
+        console.log(e);
+        res.sendStatus(500);
+    } 
+});
 
 
 
