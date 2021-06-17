@@ -1,5 +1,6 @@
 import express from 'express';
 import pg from 'pg';
+import joi from 'joi';
 
 const { Pool } = pg;
 
@@ -28,6 +29,32 @@ app.get('/categories', async (req, res) => {
     }
 });
 
+app.post('/categories', async (req, res) => {
+    const { name } = req.body;
+    const userSchema = joi.object({
+        name: joi.string().trim().required()
+    });
+    
+    try{
+        const isRepeated = await connection.query('SELECT * FROM categories WHERE name LIKE $1', [name])
+        if (isRepeated.rows[0]){
+            return res.sendStatus(409);
+        }
+        const isValid = userSchema.validate({name});
+        if (isValid.error === undefined){
+            await connection.query('INSERT INTO categories (name) VALUES ($1)', [name]);
+            res.sendStatus(201); 
+        } else {
+            if (isValid.error.details[0].type === 'string.empty'){
+                return res.sendStatus(400);
+            }
+        }
+
+    } catch(e) {
+        console.log(e);
+        res.send(500);
+    }   
+});
 
 
 
