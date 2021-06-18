@@ -313,7 +313,27 @@ app.post('/rentals', async (req, res) => {
     } 
 });
 
+app.delete('/rentals/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try{
+        const idExists = await connection.query('SELECT * FROM rentals WHERE id = $1', [id]);
+        if (!idExists.rows[0]){
+            return res.sendStatus(404);
+        }
+        if (idExists.rows[0].returnDate !== null){
+            return res.sendStatus(400);
+        } else{
+            await connection.query('DELETE FROM rentals WHERE id = $1', [id]);
+            res.sendStatus(200);
+        }
+        
+    } catch(e) {
+        console.log(e);
+        res.sendStatus(500);
+    } 
+});
 
 app.listen(4000, () => {
     console.log('Server listening on 4000');
-})
+});
