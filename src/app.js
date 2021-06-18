@@ -337,6 +337,7 @@ app.post('/rentals/:id/return', async (req, res) => {
         }
 
         await connection.query('UPDATE rentals SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3', [returnDate, delayFee, id]);
+        await connection.query('UPDATE games SET "stockTotal" = "stockTotal" + 1 WHERE id = $1', [idExists.rows[0].gameId])
         res.sendStatus(200);
 
     } catch(e) {
