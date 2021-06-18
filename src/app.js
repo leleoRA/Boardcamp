@@ -1,6 +1,7 @@
 import express from 'express';
 import pg from 'pg';
 import joi from 'joi';
+import dayjs from 'dayjs';
 
 const { Pool } = pg;
 
@@ -14,6 +15,7 @@ const connection = new Pool({
 
 const app = express();
 app.use(express.json());
+
 
 /* Categories routes */
 
@@ -55,6 +57,7 @@ app.post('/categories', async (req, res) => {
         res.sendStatus(500);
     }   
 });
+
 
 /* Games routes */
 
@@ -111,6 +114,7 @@ app.post('/games', async(req, res) => {
         res.sendStatus(500);
     } 
 });
+
 
 /* Customers route */
 
@@ -197,6 +201,45 @@ app.put('/customers/:id', async (req, res) => {
         if (isValid.error === undefined){
             await connection.query('UPDATE customers SET name=$1, phone=$2, cpf=$3, birthday=$4 WHERE id = $5', [name, phone, cpf, birthday, id]);
             return res.sendStatus(200); 
+        } else{
+            return res.sendStatus(400);
+        }
+
+    } catch(e) {
+        console.log(e);
+        res.sendStatus(500);
+    } 
+});
+
+
+/* Rentals routes */
+
+app.post('/rentals', async (req, res) => {
+    const { customerId, gameId, daysRented } = req.body;
+    const rentalsSchema = joi.object({
+        customerId: joi.number(),
+        gameId: joi.number(),
+        daysRented: joi.number().min(1)
+    });
+
+    try{
+        const customerExists = await connection.query('SELECT * FROM customers WHERE id = $1', [customerId]);
+        const gameExists = await connection.query('SELECT * FROM games WHERE id = $1', [gameId]);
+        const games = await connection.query('SELECT * FROM rentals WHERE "gameId" = $1', [gameId]);
+        const rentedGames = games.rows.filter(item => item.returnDate === null);
+        const isValid = rentalsSchema.validate({customerId, gameId, daysRented});
+
+
+        const rentDate = dayjs().format('YYYY-MM-DD');
+        const originalPrice = gameExists.rows[0].pricePerDay * daysRented;
+
+        if ((isValid.error === undefined) && customerExists.rows[0] && gameExists.rows[0] && (rentedGames.length < gameExists.rows[0].stockTotal)){
+            await connection.query(`
+                INSERT INTO rentals 
+                ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee")
+                VALUES ($1,$2,$3,$4,$5,$6,$7)
+                `, [customerId, gameId, rentDate, daysRented, null, originalPrice, null]);
+            return res.sendStatus(201);
         } else{
             return res.sendStatus(400);
         }
