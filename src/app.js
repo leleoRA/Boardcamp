@@ -214,6 +214,69 @@ app.put('/customers/:id', async (req, res) => {
 
 /* Rentals routes */
 
+app.get('/rentals', async (req, res) => {
+    const { customerId, gameId } = req.query;
+    let querySetting = "";
+    let argument = [];
+
+    if(customerId && gameId) {
+        querySetting = ` WHERE rentals."gameId" = $1 AND rentals."customerId" = $2`;
+        argument = [gameId, customerId];
+    } else if(customerId) {
+        querySetting = ` WHERE rentals."customerId" = $1`;
+        argument = [customerId];
+    } else {            
+        querySetting = ` WHERE rentals."gameId" = $1`;
+        argument = [gameId];
+    }
+
+    try{
+        const initialResult = await connection.query(`
+            SELECT rentals.* , 
+            customers.name AS "customerName", 
+            games.name AS "gameName", 
+            games."categoryId", 
+            categories.name AS "categoryName"
+            FROM rentals 
+            JOIN customers 
+            ON customers.id = rentals."customerId"        
+            JOIN games 
+            ON rentals."gameId" = games.id   
+            JOIN categories  
+            ON games."categoryId" = categories.id
+            ${querySetting}
+        `, argument);
+
+        const finalResult = initialResult.rows.map(i => {
+            return({
+                id: i.id,
+                customerId: i.customerId,
+                gameId: i.gameId,
+                rentDate: i.rentDate,
+                daysRented: i.daysRented,
+                returnDate: i.returnDate,
+                originalPrice: i.originalPrice,
+                delayFee: i.delayFee,
+                customer: {
+                    id: i.customerId,
+                    name: i.customerName
+                },
+                game: {
+                    id: i.gameId,
+                    name: i.gameName,
+                    categoryId: i.categoryId,
+                    categoryName: i.categoryName
+                }
+            })
+        });
+        res.send(finalResult);
+
+    } catch(e) {
+        console.log(e);
+        res.sendStatus(500);
+    } 
+});
+
 app.post('/rentals', async (req, res) => {
     const { customerId, gameId, daysRented } = req.body;
     const rentalsSchema = joi.object({
