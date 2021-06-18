@@ -157,6 +157,22 @@ app.post('/customers', async (req, res) => {
     } 
 });
 
+app.get('/customers/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try{
+        const result = await connection.query('SELECT * FROM customers WHERE id = $1', [id]);
+        if (!result.rows[0]){
+            return res.sendStatus(404);
+        } else{
+            return res.send(result.rows[0]);
+        }
+        
+    } catch(e) {
+        console.log(e);
+        res.sendStatus(500);
+    } 
+});
 
 
 app.listen(4000, () => {
